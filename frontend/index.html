@@ -1,8 +1,15 @@
-<h1>Mini CI</h1>
 
-<input id="repo" placeholder="repo url">
-<input id="branch" placeholder="branch">
+<header style="background: #e9322e; color: white; padding: 1rem; margin-bottom: 2rem;">
+    <h1 style="margin: 0;">Mini CI Orchestrator</h1>
+    <small>Custom Build System for Red Hat Demo</small>
+</header>
 
-<button id="buildButt">Build</button>
-<div id="buildsList"></div>
+<body style="background: #f3e7e7; justify-content: center; align-items: center; display: flex; flex-direction: column; gap: 1rem;">
+    <input id="repo" placeholder="repo url" value="https://github.com/Shiri-sh/test-mini-ci">
+    <input id="branch" placeholder="branch" value="main">
+
+    <button id="buildButt" style="color: #e9322e;">Build</button>
+
+    <div id="buildsList"></div>
+</body>
 <script src="app.js"></script>
