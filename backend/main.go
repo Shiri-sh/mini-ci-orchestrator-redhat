@@ -6,12 +6,15 @@ import (
 )
 
 func main() {
-	http.Handle("/", http.FileServer(http.Dir("./frontend")))
+	http.Handle("/", http.FileServer(http.Dir("../frontend")))
 
 	// API endpoints
 	http.HandleFunc("/builds", GetAllBuildsHandler)
 	http.HandleFunc("/build/create", CreateBuildHandler)
 
-	log.Println("Server started on :8080")
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	err:= http.ListenAndServe(":8080", nil)
+	if err != nil {
+		log.Fatalf("Server failed to start: %v", err)
+	}
+
 }
