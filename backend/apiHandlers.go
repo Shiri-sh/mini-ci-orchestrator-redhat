@@ -3,12 +3,13 @@ package main
 import(
 	"encoding/json"
 	"net/http"
+	"time"
 )
 
 // API Handlers
 
 // Get all builds
-func GetBuildsHandler(w http.ResponseWriter, r *http.Request) {
+func GetAllBuildsHandler(w http.ResponseWriter, r *http.Request) {
 	mu.Lock()
 	defer mu.Unlock()
 
@@ -29,7 +30,7 @@ func CreateBuildHandler(w http.ResponseWriter, r *http.Request) {
 	b.ID = nextBuildID
 	nextBuildID++
 	b.Status = "pending"
-	b.Repo := r.FormValue("repo")
+	b.Repo = r.FormValue("repo")
 	b.Branch = r.FormValue("branch")
 	b.CreatedAt = time.Now()
 	newBuild := AddBuild(b)
