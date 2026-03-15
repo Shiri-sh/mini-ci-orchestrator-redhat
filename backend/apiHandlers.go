@@ -4,41 +4,39 @@ import(
 	"encoding/json"
 	"net/http"
 	"time"
+	"fmt"
 )
 
 // API Handlers
 
 // Get all builds
 func GetAllBuildsHandler(w http.ResponseWriter, r *http.Request) {
-	mu.Lock()
-	defer mu.Unlock()
-
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(GetAllBuilds())
 }
 
 // Create a new build
 func CreateBuildHandler(w http.ResponseWriter, r *http.Request) {
-	var b Build
-
-	if err := json.NewDecoder(r.Body).Decode(&b); err != nil {
+	fmt.Println("Creating a new build")
+    var br BuildRequest
+	if err := json.NewDecoder(r.Body).Decode(&br); err != nil {
+		fmt.Printf("Error decoding request body: %v\n", err)
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
 	}
-	mu.Lock()
+	var b Build
 
-	b.ID = nextBuildID
-	nextBuildID++
 	b.Status = "pending"
-	b.Repo = r.FormValue("repo")
-	b.Branch = r.FormValue("branch")
+	b.Repo = br.Repo
+	b.Branch = br.Branch
 	b.CreatedAt = time.Now()
 	newBuild := AddBuild(b)
-	
-	mu.Unlock()
+
+	fmt.Printf("New build created: %+v\n", newBuild)
     
 	go TriggerBuild(newBuild)
-
+	
+    fmt.Println("sending back response")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(newBuild)
 }
