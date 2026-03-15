@@ -1,38 +1,41 @@
 package main
 
-import "sync"
-
-// In-memory store for builds
-var (
-	builds []Build
-	nextBuildID = 1
-	mu sync.Mutex
+import (
+	"k8s.io/client-go/kubernetes"
 )
 
-func AddBuild(b Build) Build {
-	mu.Lock()
-	defer mu.Unlock()
-	b.ID = nextBuildID
-	nextBuildID++
-	builds = append(builds, b)
+func NewApp(client *kubernetes.Clientset) *App {
+	return &App{
+		K8sClient: client,
+		Builds: []Build{},
+		NextBuildID: 1,
+	}
+}
+
+func (app *App) AddBuild(b Build) Build {
+	app.Mu.Lock()
+	defer app.Mu.Unlock()
+	b.ID = app.NextBuildID
+	app.NextBuildID++
+	app.Builds = append(app.Builds, b)
 	return b
 }
 
-func GetAllBuilds() []Build {
-	mu.Lock()
-	defer mu.Unlock()
+func (app *App) GetAllBuilds() []Build {
+	app.Mu.Lock()
+	defer app.Mu.Unlock()
 	//returns a copy of the builds slice to prevent external modification
-	copiedBuilds := make([]Build, len(builds))
-	copy(copiedBuilds, builds)
+	copiedBuilds := make([]Build, len(app.Builds))
+	copy(copiedBuilds, app.Builds)
 	return copiedBuilds
 }
 
-func UpdateBuildStatus(buildID int, status string) {
-	mu.Lock()
-	defer mu.Unlock()
-	for i, b := range builds {
+func (app *App) UpdateBuildStatus(buildID int, status string) {
+	app.Mu.Lock()
+	defer app.Mu.Unlock()
+	for i, b := range app.Builds {
 		if b.ID == buildID {
-			builds[i].Status = status
+			app.Builds[i].Status = status
 			break
 		}
 	}

@@ -2,7 +2,16 @@ package main
 
 import(
 	"time"
+	"k8s.io/client-go/kubernetes"
+	"sync"
 )
+
+type App struct {
+	K8sClient *kubernetes.Clientset
+	Builds []Build
+	NextBuildID int
+	Mu sync.Mutex
+}
 
 type Build struct {
 	ID int `json:"id"`
@@ -16,3 +25,4 @@ type BuildRequest struct {
 	Repo string `json:"repo"`
 	Branch string `json:"branch"`
 }
+
