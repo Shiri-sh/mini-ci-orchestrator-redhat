@@ -25,9 +25,10 @@ func main() {
 	http.HandleFunc("/builds", app.GetAllBuildsHandler)
 	http.HandleFunc("/build/create", app.CreateBuildHandler)
 
-	err = http.ListenAndServe(":8081", nil)
+	err = http.ListenAndServe(":8080", nil)
 	if err != nil {
 		log.Fatalf("Server failed to start: %v", err)
 	}
+	log.Println("Server started on port 8080")
 
 }
