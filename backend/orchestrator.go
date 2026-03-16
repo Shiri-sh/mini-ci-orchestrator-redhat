@@ -4,17 +4,21 @@ import (
 	"fmt"
 	"context"
 	"time"
+	"log"
 
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
+	
+	
 )
 
 func (app *App) TriggerBuild(b Build) {
 	fmt.Printf("Starting Kubernetes job for repo: %s, branch: %s\n", b.Repo, b.Branch)
     
 	ctx := context.Background()
-
+    app.EnssurePVSExists()
 	job := CloneSecurityJob(b)
 
 	//create the job in Kubernetes
@@ -68,7 +72,7 @@ func CloneSecurityJob(b Build) *batchv1.Job {
 			},
 		},
 		Spec: batchv1.JobSpec{
-			TTLSecondsAfterFinished: int32Ptr(100),
+			TTLSecondsAfterFinished: int32Ptr(500), //clean up job after 500 seconds
 			Template: corev1.PodTemplateSpec{
 				Spec: corev1.PodSpec{
 					Volumes: []corev1.Volume{
@@ -91,7 +95,7 @@ func CloneSecurityJob(b Build) *batchv1.Job {
 					InitContainers: []corev1.Container{
 						{
 							Name:  "git-clone",
-							Image: "alpine/git:2.41.0",
+							Image: "alpine/git",
 							Command: []string{
 								"sh",
 								"-c",
@@ -109,7 +113,7 @@ func CloneSecurityJob(b Build) *batchv1.Job {
 					Containers: []corev1.Container{
 						{
 							Name:  "security-scan",
-							Image: "trufflesecurity/trufflehog:3.24.1",
+							Image: "trufflesecurity/trufflehog",
 							Command: []string{
 							"sh",
 							"-c",
@@ -131,5 +135,29 @@ func CloneSecurityJob(b Build) *batchv1.Job {
 				},
 			},
 		},
+	}
+}
+func (app *App) EnssurePVSExists() {
+	pvsClient:= app.K8sClient.CoreV1().PersistentVolumeClaims("default")
+	_, err := pvsClient.Get(context.Background(), "mini-ci-artifacts", metav1.GetOptions{})
+	if err == nil {
+		return//pvs exists
+	}
+	newPvs:= &corev1.PersistentVolumeClaim{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "mini-ci-artifacts",
+		},
+		Spec: corev1.PersistentVolumeClaimSpec{
+			AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
+			Resources: corev1.VolumeResourceRequirements{
+				Requests: corev1.ResourceList{
+					corev1.ResourceStorage: resource.MustParse("500Mi"),
+				},
+			},
+		},
+	}
+	_, err = pvsClient.Create(context.Background(), newPvs, metav1.CreateOptions{})
+	if err != nil {
+		log.Fatalf("Error creating PersistentVolumeClaim: %v\n", err)
 	}
 }
