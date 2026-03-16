@@ -29,7 +29,7 @@ func (app *App) CreateBuildHandler(w http.ResponseWriter, r *http.Request) {
 	//check validity of request
 	var b Build
 
-	b.Status = "pending"
+	b.Status = "running"
 	b.Repo = br.Repo
 	b.Branch = br.Branch
 	b.CreatedAt = time.Now()

@@ -9,6 +9,10 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	"strconv"
+	batchv1 "k8s.io/api/batch/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"context"
 )
 
 func NewApp(client *kubernetes.Clientset) *App {
@@ -16,6 +20,41 @@ func NewApp(client *kubernetes.Clientset) *App {
 		K8sClient: client,
 		Builds: []Build{},
 		NextBuildID: 1,
+	}
+}
+func (app *App) WatchJobs() {
+	//watch only to jobs with label app=mini-ci to avoid watching all jobs in the cluster
+	watch, err := app.K8sClient.BatchV1().Jobs("default").Watch(context.TODO(), metav1.ListOptions{
+		LabelSelector: "app=mini-ci",
+	})
+	if err != nil {
+		fmt.Printf("Error starting watch: %v\n", err)
+		return
+	}
+
+	fmt.Println("Watching Kubernetes Jobs for updates...")
+
+	for event := range watch.ResultChan() {
+		job, ok := event.Object.(*batchv1.Job)
+		if !ok { continue }
+
+		buildIDStr := job.Labels["build-id"]
+		buildID, _ := strconv.Atoi(buildIDStr)
+
+		if job.Status.Active > 0 {
+			app.UpdateBuildStatus(buildID, "running")
+			fmt.Printf("Build %d is currently running...\n", buildID)
+			continue 
+		}
+
+	
+		if job.Status.Succeeded > 0 {
+			app.UpdateBuildStatus(buildID, "success")
+			fmt.Printf("Build %d finished successfully\n", buildID)
+		} else if job.Status.Failed > 0 {
+			app.UpdateBuildStatus(buildID, "failed")
+			fmt.Printf("Build %d failed\n", buildID)
+		}
 	}
 }
 func GetK8sClient() (*kubernetes.Clientset, error) {
@@ -45,6 +84,7 @@ func main() {
 		log.Fatalf("Failed to create Kubernetes client: %v", err)
 	}
 	app := NewApp(client)
+	go app.WatchJobs()
 	// API endpoints
 	http.HandleFunc("/builds", app.GetAllBuildsHandler)
 	http.HandleFunc("/build/create", app.CreateBuildHandler)
@@ -53,6 +93,4 @@ func main() {
 	if err != nil {
 		log.Fatalf("Server failed to start: %v", err)
 	}
-	log.Println("Server started on port 8080")
-
 }
