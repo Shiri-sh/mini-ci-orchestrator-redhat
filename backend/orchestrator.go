@@ -1,18 +1,12 @@
 package main
 
 import (
-	// "time"
 	"fmt"
 	"context"
-	// "os"
-	// "path/filepath"
 
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	// "k8s.io/client-go/kubernetes"
-	// "k8s.io/client-go/rest"
-	// "k8s.io/client-go/tools/clientcmd"
 )
 
 func (app *App) TriggerBuild(b Build) {
@@ -21,27 +15,17 @@ func (app *App) TriggerBuild(b Build) {
 	ctx := context.Background()
 
 	job := CloneSecurityJob(b)
-	
-	errUpdateRunning := app.UpdateBuildStatus(b.ID,"Running")
-	if errUpdateRunning != nil {
-		fmt.Printf("Error updating build status: %v\n", errUpdateRunning)
-	}
 
 	//create the job in Kubernetes
 	_, err := app.K8sClient.BatchV1().Jobs("default").Create(ctx, job, metav1.CreateOptions{})
 	if err != nil {
 		fmt.Printf("Error creating Kubernetes job: %v\n", err)
-		err = app.UpdateBuildStatus(b.ID,"Failed")
+		err = app.UpdateBuildStatus(b.ID,"failed")
 		if err != nil {
 			fmt.Printf("Error updating build status: %v\n", err)
 		}
 		return
 	}
-	errUpdateSuccess := app.UpdateBuildStatus(b.ID,"Succeeded")
-	if errUpdateSuccess != nil {
-		fmt.Printf("Error updating build status: %v\n", errUpdateSuccess)
-	}
-
 }
 
 func FakeCloneJob(b Build) *batchv1.Job {
@@ -69,6 +53,7 @@ func FakeCloneJob(b Build) *batchv1.Job {
 		},
 	}
 }
+func int32Ptr(i int32) *int32 { return &i }
 
 func CloneSecurityJob(b Build) *batchv1.Job {
 	return &batchv1.Job{
@@ -95,7 +80,7 @@ func CloneSecurityJob(b Build) *batchv1.Job {
 					InitContainers: []corev1.Container{
 						{
 							Name:  "git-clone",
-							Image: "alpine/git:latest",
+							Image: "alpine/git:2.41.0",
 							Command: []string{
 								"sh",
 								"-c",
@@ -113,7 +98,7 @@ func CloneSecurityJob(b Build) *batchv1.Job {
 					Containers: []corev1.Container{
 						{
 							Name:  "security-scan",
-							Image: "trufflesecurity/trufflehog:latest",
+							Image: "trufflesecurity/trufflehog:3.24.1",
 							Args: []string{"filesystem","/workspace","--fail"},
 							VolumeMounts: []corev1.VolumeMount{
 								{
@@ -129,5 +114,3 @@ func CloneSecurityJob(b Build) *batchv1.Job {
 		},
 	}
 }
-
-func int32Ptr(i int32) *int32 { return &i }
