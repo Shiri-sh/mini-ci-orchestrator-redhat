@@ -26,6 +26,7 @@ func (app *App) CreateBuildHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
 	}
+	//check validity of request
 	var b Build
 
 	b.Status = "pending"
