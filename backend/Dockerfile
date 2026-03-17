@@ -1,14 +1,16 @@
-FROM golang:1.23-alpine AS builder
+FROM golang:1.26-alpine AS builder
 
-# הגדרת תיקיית עבודה בתוך הקונטיינר
+#defining the working directory inside the container
 WORKDIR /app
 
-# העתקת קבצי התלויות והורדתן
+#copying the go.mod and go.sum and downloading the dependencies
 COPY go.mod go.sum ./
 RUN go mod download
 
+#copying the source code into the container
 COPY . .
 
+#building the application for linux with CGO disabled to create a statically linked binary
 RUN CGO_ENABLED=0 GOOS=linux go build -o main .
 
 #final image

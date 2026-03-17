@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mini-ci-orchestrator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mini-ci
+  template:
+    metadata:
+      labels:
+        app: mini-ci
+    spec:
+      serviceAccountName: default 
+      containers:
+        - name: orchestrator
+          image: mini-ci-backend:v1
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          volumeMounts:
+            - name: storage
+              mountPath: /data
+          resources:
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+            requests:
+              cpu: "250m"
+              memory: "128Mi"
+      volumes:
+        - name: storage
+          persistentVolumeClaim:
+            claimName: mini-ci-artifacts
+      
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mini-ci-service
+spec:
+  type: NodePort
+  selector:
+    app: mini-ci
+  ports:
+    - port: 8080
+      targetPort: 8080
+      nodePort: 30001
