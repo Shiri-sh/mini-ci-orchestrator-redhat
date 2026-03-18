@@ -34,16 +34,3 @@ spec:
           persistentVolumeClaim:
             claimName: mini-ci-artifacts
       
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: mini-ci-service
-spec:
-  type: NodePort
-  selector:
-    app: mini-ci
-  ports:
-    - port: 8080
-      targetPort: 8080
-      nodePort: 30001
